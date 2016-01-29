@@ -82,6 +82,7 @@ define duplicity::profile(
   $source                 = '/',
   $full_if_older_than     = '',
   $max_full_backups       = '',
+  $max_fulls_with_incrs    = '',
   $volsize                = 50,
   $include_filelist       = [],
   $exclude_filelist       = [],
