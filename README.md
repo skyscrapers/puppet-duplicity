@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/skyscrapers/puppet-duplicity.svg?branch=master)](https://travis-ci.org/skyscrapers/puppet-duplicity)
 #duplicity
 
 ##Overview
