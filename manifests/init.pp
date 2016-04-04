@@ -58,7 +58,7 @@
 # [*duply_cache_dir*]
 #   Defines a folder that holds unencrypted meta data of the backup, enabling new incrementals without the
 #   need to decrypt backend metadata first. If empty or deleted somehow, the private key and it's password are needed.
-#   NOTE: This is confidential data. Put it somewhere safe. It can grow quite big over time so you might want to put 
+#   NOTE: This is confidential data. Put it somewhere safe. It can grow quite big over time so you might want to put
 #   it not in the home dir. default '~/.cache/duplicity/duply_<profile>/'
 #
 # [*duply_log_group*]
@@ -104,6 +104,7 @@ class duplicity (
   $duplicity_package_ensure  = $duplicity::params::duplicity_package_ensure,
   $duplicity_package_name    = $duplicity::params::duplicity_package_name,
   $duplicity_extra_params    = undef,
+  $duplicity_extra_conf      = undef,
   $duply_package_ensure      = $duplicity::params::duply_package_ensure,
   $duply_package_name        = $duplicity::params::duply_package_name,
   $duply_package_provider    = $duplicity::params::duply_package_provider,
