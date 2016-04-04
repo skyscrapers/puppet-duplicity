@@ -183,6 +183,8 @@ DUPL_PARAMS="$DUPL_PARAMS --volsize $VOLSIZE "
 # don't forget to leave a separating space char at the end
 #DUPL_PARAMS="$DUPL_PARAMS --put_your_options_here "
 
+<% if @duplicity_extra_conf and !@duplicity_extra_conf.empty? -%>
 <% @duplicity_extra_conf.each do |extra_conf| -%>
 <%= extra_conf %>
+<% end -%>
 <% end -%>
