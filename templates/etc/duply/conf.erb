@@ -120,6 +120,8 @@ MAX_FULL_BACKUPS=<%= @max_full_backups %>
 #MAX_FULLS_WITH_INCRS=1
 <% if @max_fulls_with_incrs and !@max_fulls_with_incrs.empty? -%>
 MAX_FULLS_WITH_INCRS=<%= @max_fulls_with_incrs %>
+<% elsif @max_full_backups and !@max_full_backups.empty? -%>
+MAX_FULLS_WITH_INCRS=<%= @max_full_backups %>
 <% end -%>
 
 # activates duplicity --full-if-older-than option (since duplicity v0.4.4.RC3)
