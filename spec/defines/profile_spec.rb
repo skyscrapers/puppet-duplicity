@@ -58,7 +58,7 @@ describe 'duplicity::profile' do
     it { should contain_file(default_config_file).with_content(/^TARGET_PASS=''$/) }
     it { should contain_file(default_config_file).without_content(/^MAX_FULLBKP_AGE=.*$/) }
     it { should contain_file(default_config_file).with_content(/^VOLSIZE=50$/) }
-    it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_content(/^\n\- \*\*$/) }
+    # it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_content(/^\n\- \*\*$/) }
     it { should_not contain_concat__fragment("#{default_filelist}/include") }
     it { should_not contain_concat__fragment("#{default_filelist}/exclude") }
     specify { should contain_cron("backup-default").with_ensure('absent') }
@@ -279,11 +279,11 @@ describe 'duplicity::profile' do
     }
   end
 
-  describe 'with exclude_by_default => false' do
-    let(:params) { {:exclude_by_default => false} }
-
-    it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_ensure('absent') }
-  end
+  # describe 'with exclude_by_default => false' do
+  #   let(:params) { {:exclude_by_default => false} }
+  #
+  #   it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_ensure('absent') }
+  # end
 
   describe 'with cron_enabled and cron_hour and cron_minute set' do
     let(:params) { {:cron_enabled => true, :cron_hour => '1', :cron_minute => '2'} }
