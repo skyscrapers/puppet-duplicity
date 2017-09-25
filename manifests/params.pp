@@ -21,10 +21,11 @@ class duplicity::params {
     default => 'duply',
   }
   $duply_package_provider = $::osfamily ? {
-    'redhat' => 'yum',
-    'debian' => 'apt',
+    'RedHat' => 'yum',
+    'Debian' => 'apt',
     default  => 'archive'
   }
+  $duply_extra_packages = []
   $duply_archive_version = '1.7.3'
   $duply_archive_md5sum = '139e36c3ee35d8bca15b6aa9c7f8939b'
   $duply_archive_package_dir = $::operatingsystem ? {
@@ -39,6 +40,8 @@ class duplicity::params {
   $duply_config_dir = $::osfamily ? {
     default => '/etc/duply'
   }
+  $duply_config_dir_mode = '0600'
+  $duply_purge_config_dir = true
   $duply_profile_config_name = 'conf'
   $duply_profile_filelist_name = 'exclude'
   $duply_profile_pre_script_name = 'pre'
@@ -48,12 +51,44 @@ class duplicity::params {
   }
   $duply_public_key_dir = "${duply_key_dir}/public"
   $duply_private_key_dir = "${duply_key_dir}/private"
+  $duply_purge_key_dir = true
+  $duply_use_logrotate_module = true
   $duply_log_dir = $::osfamily ? {
     default => '/var/log/duply'
   }
   $duply_log_group = $::osfamily ? {
     'redhat' => 'root',
     default  => 'adm',
+  }
+
+  case $::operatingsystem {
+    'Debian': {
+      $duply_version = $::lsbmajdistrelease ? {
+        '7' => '1.5.5.5',
+        '8' => '1.9.1',
+        '9' => '1.11.3'
+      }
+    }
+    'Ubuntu': {
+      $duply_version = $::lsbdistrelease ? {
+        '12.04' => '1.5.5.4',
+        '14.04' => '1.5.10',
+        '14.10' => '1.8.0',
+        '15.04' => '1.9.1',
+        '15.10' => '1.9.2',
+        '16.04' => '1.11',
+        default => '1.11',
+      }
+    }
+    'CentOS': {
+      $duply_version = $::operatingsystemmajrelease ? {
+        '6' => '1.6.0',
+        '7' => '1.11',
+      }
+    }
+    default: {
+      $duply_version = $duply_archive_version
+    }
   }
 
   $gpg_encryption_keys = []

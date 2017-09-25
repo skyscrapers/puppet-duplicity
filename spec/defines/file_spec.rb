@@ -2,17 +2,22 @@ require 'spec_helper'
 
 describe 'duplicity::file' do
   let(:title) { '/path/to/file' }
-  let(:facts) { {:concat_basedir => '/path/to/dir'} }
   let(:include_fragment) { '/etc/duply/system/include/b4a91649090a2784056565363583d067' }
   let(:exclude_fragment) { '/etc/duply/system/exclude/b4a91649090a2784056565363583d067' }
-  let(:restore_exec) { "restore /path/to/file" }
+  let(:restore_exec) { 'restore /path/to/file' }
+  let(:pre_condition) { <<-EOS
+      # declare profiles referenced later
+      duplicity::profile { 'system': }
+
+      class { 'duplicity': }
+    EOS
+  }
 
   describe 'by default' do
     let(:params) { {} }
 
     specify {
       should contain_concat__fragment(include_fragment).with(
-        'ensure'  => 'present',
         'content' => "+ /path/to/file"
       )
     }
@@ -23,7 +28,7 @@ describe 'duplicity::file' do
   describe 'with ensure absent' do
     let(:params) { {:ensure => 'absent'} }
 
-    specify { should contain_concat__fragment(include_fragment).with_ensure('absent') }
+    specify { should_not contain_concat__fragment(include_fragment) }
     specify { should_not contain_exec(restore_exec) }
   end
 

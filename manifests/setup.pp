@@ -17,9 +17,9 @@ class duplicity::setup inherits duplicity {
     ensure  => directory,
     owner   => 'root',
     group   => 'root',
-    mode    => '0644',
+    mode    => $duplicity::duply_config_dir_mode,
     backup  => false,
-    purge   => true,
+    purge   => $duplicity::duply_purge_config_dir,
     force   => true,
     recurse => true,
   }
@@ -30,7 +30,7 @@ class duplicity::setup inherits duplicity {
     group   => 'root',
     mode    => '0644',
     backup  => false,
-    purge   => true,
+    purge   => $duplicity::duply_purge_key_dir,
     force   => true,
     recurse => true,
   }
@@ -56,17 +56,29 @@ class duplicity::setup inherits duplicity {
     mode   => '0640',
   }
 
-  logrotate::rule { 'duply':
-    ensure       => present,
-    path         => "${duplicity::duply_log_dir}/*.log",
-    rotate       => '5',
-    size         => '100k',
-    compress     => true,
-    missingok    => true,
-    create       => true,
-    create_owner => 'root',
-    create_group => $duplicity::duply_log_group,
-    create_mode  => '0640',
-    require      => File[$duplicity::duply_log_dir],
+  if $duplicity::duply_use_logrotate_module == true {
+    logrotate::rule { 'duply':
+      ensure       => present,
+      path         => "${duplicity::duply_log_dir}/*.log",
+      rotate       => 5,
+      size         => '100k',
+      compress     => true,
+      missingok    => true,
+      create       => true,
+      create_owner => 'root',
+      create_group => $duplicity::duply_log_group,
+      create_mode  => '0640',
+      require      => File[$duplicity::duply_log_dir],
+    }
   }
+  else {
+    file { '/etc/logrotate.d/duply':
+      ensure  => file,
+      owner   => 'root',
+      group   => 'root',
+      mode    => '0640',
+      content => template('duplicity/etc/logrotate.d/duply.erb'),
+    }
+  }
+
 }

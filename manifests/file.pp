@@ -37,7 +37,7 @@ define duplicity::file(
   $profile = 'system',
   $timeout = 300,
 ) {
-  require duplicity::params
+  require duplicity
 
   if $ensure !~ /^present|backup|absent$/ {
     fail("Duplicity::File[${title}]: ensure must be either present, backup or absent, got '${ensure}'")
@@ -56,27 +56,27 @@ define duplicity::file(
   $profile_dir = "${duplicity::params::duply_config_dir}/${profile}"
   $profile_filelist = "${profile_dir}/${duplicity::params::duply_profile_filelist_name}"
   $profile_filelist_ensure = $ensure ? {
-    'absent'  => absent,
-    default   => present,
+    'absent' => absent,
+    default  => present,
   }
   $exclude_filelist = join(prefix($exclude, '- '), "\n")
   $path_md5 = md5($path)
   $path_without_slash = regsubst($path, '^/(.*)$', '\1')
 
-  if !empty($exclude) {
-    concat::fragment { "${profile_dir}/exclude/${path_md5}":
-      ensure  => $profile_filelist_ensure,
-      target  => $profile_filelist,
-      content => $exclude_filelist,
-      order   => '25',
+  if $profile_filelist_ensure == present {
+    if !empty($exclude) {
+      concat::fragment { "${profile_dir}/exclude/${path_md5}":
+        target  => $profile_filelist,
+        content => $exclude_filelist,
+        order   => '25',
+      }
     }
-  }
 
-  concat::fragment { "${profile_dir}/include/${path_md5}":
-    ensure  => $profile_filelist_ensure,
-    target  => $profile_filelist,
-    content => "+ ${path}",
-    order   => '75',
+    concat::fragment { "${profile_dir}/include/${path_md5}":
+      target  => $profile_filelist,
+      content => "+ ${path}",
+      order   => '75',
+    }
   }
 
   if $ensure == present {

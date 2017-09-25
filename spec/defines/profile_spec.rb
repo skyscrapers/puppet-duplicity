@@ -1,8 +1,17 @@
 require 'spec_helper'
 
 describe 'duplicity::profile' do
+  let(:pre_condition) { <<-EOS
+      # declare some keys referenced later
+      duplicity::private_key { 'key1': content => 'key1' }
+      duplicity::public_key { 'key1': content => 'key1' }
+      duplicity::public_key { 'key2': content => 'key2' }
+
+      class { 'duplicity': }
+    EOS
+  }
+
   let(:title) { 'default' }
-  let(:facts) { {:concat_basedir => '/path/to/dir'} }
   let(:default_config_file) { '/etc/duply/default/conf' }
   let(:default_filelist) { '/etc/duply/default/exclude' }
 
@@ -54,9 +63,11 @@ describe 'duplicity::profile' do
     it { should contain_file(default_config_file).with_content(/^GPG_KEY_SIGN='disabled'$/) }
     it { should contain_file(default_config_file).with_content(/^GPG_PW=''$/) }
     it { should contain_file(default_config_file).with_content(/^GPG_OPTS=''$/) }
-    it { should contain_file(default_config_file).with_content(/^TARGET_USER=''$/) }
-    it { should contain_file(default_config_file).with_content(/^TARGET_PASS=''$/) }
+    it { should contain_file(default_config_file).without_content(/^TARGET_USER=''$/) }
+    it { should contain_file(default_config_file).without_content(/^TARGET_PASS=''$/) }
     it { should contain_file(default_config_file).without_content(/^MAX_FULLBKP_AGE=.*$/) }
+    it { should contain_file(default_config_file).without_content(/^MAX_AGE=.*$/) }
+    it { should contain_file(default_config_file).without_content(/^MAX_FULL_BACKUPS=.*$/) }
     it { should contain_file(default_config_file).with_content(/^VOLSIZE=50$/) }
     # it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_content(/^\n\- \*\*$/) }
     it { should_not contain_concat__fragment("#{default_filelist}/include") }
@@ -64,6 +75,10 @@ describe 'duplicity::profile' do
     specify { should contain_cron("backup-default").with_ensure('absent') }
     specify { should contain_file(default_config_file).with_content(/^SOURCE='\/'$/) }
     specify { should contain_file(default_config_file).with_content(/^TARGET='\/default'$/) }
+    it { should contain_duplicity__profile_exec_before('default/header') }
+    it { should_not contain_duplicity__profile_exec_before('default/content') }
+    it { should contain_duplicity__profile_exec_after('default/header') }
+    it { should_not contain_duplicity__profile_exec_after('default/content') }
   end
 
   describe 'with ensure absent' do
@@ -71,9 +86,9 @@ describe 'duplicity::profile' do
 
     it { should contain_file('/etc/duply/default').with_ensure('absent') }
     it { should contain_file('/etc/duply/default/conf').with_ensure('absent') }
-    it { should contain_file('/etc/duply/default/exclude').with_ensure('absent') }
-    it { should contain_file('/etc/duply/default/pre').with_ensure('absent') }
-    it { should contain_file('/etc/duply/default/post').with_ensure('absent') }
+    it { should contain_concat('/etc/duply/default/exclude').with_ensure('absent') }
+    it { should contain_concat('/etc/duply/default/pre').with_ensure('absent') }
+    it { should contain_concat('/etc/duply/default/post').with_ensure('absent') }
   end
 
   describe 'with invalid ensure' do
@@ -84,6 +99,18 @@ describe 'duplicity::profile' do
     end
   end
 
+<<<<<<< HEAD
+=======
+  describe 'with duplicity_extra_params defined' do
+    let(:params) { {:duplicity_extra_params => [ '--s3-use-3-use-server-side-encryption' ]} }
+
+    it do
+      should contain_file('/etc/duply/default/conf')
+      .with('content' => /DUPL_PARAMS --s3-use-3-use-server-side-encryption/)
+    end
+  end
+
+>>>>>>> 2c601c0abd5609773276097b01a3fbb8e2bf66b6
   describe 'with gpg_encryption => false' do
     let(:params) { {:gpg_encryption => false} }
 
@@ -203,10 +230,17 @@ describe 'duplicity::profile' do
     it { should contain_file(default_config_file).with_content(/^TARGET_USER='johndoe'$/) }
   end
 
-  describe 'with target_password => secret' do
-    let(:params) { {:target_password => 'secret'} }
+  describe 'with target_username => johndoe, target_password => secret' do
+    let(:params) { {:target_username => 'johndoe', :target_password => 'secret'} }
 
+    it { should contain_file(default_config_file).with_content(/^TARGET_USER='johndoe'$/) }
     it { should contain_file(default_config_file).with_content(/^TARGET_PASS='secret'$/) }
+  end
+
+  describe 'should accept max_age as string' do
+    let(:params) { {:max_age => '5d'} }
+
+    it { should contain_file(default_config_file).with_content(/^MAX_AGE=5d$/) }
   end
 
   describe 'should accept max_full_backups as integer' do
@@ -279,11 +313,49 @@ describe 'duplicity::profile' do
     }
   end
 
+<<<<<<< HEAD
   # describe 'with exclude_by_default => false' do
   #   let(:params) { {:exclude_by_default => false} }
   #
   #   it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_ensure('absent') }
   # end
+=======
+  describe 'with exclude_content => "+ /etc/duply\n- /etc\n"' do
+    let(:params) { { :exclude_content => "+ /etc/duply\n- /etc\n" } }
+
+    it { should contain_concat__fragment("#{default_filelist}/content").with_content("+ /etc/duply\n- /etc\n") }
+    it { should_not contain_concat__fragment("#{default_filelist}/include") }
+    it { should_not contain_concat__fragment("#{default_filelist}/exclude") }
+  end
+
+  describe 'with exclude_content and exclude_filelist' do
+    let(:params) { {
+        :exclude_content  => "+ /etc/duply\n- /etc\n",
+        :exclude_filelist => ['/a/b']
+    } }
+
+    specify {
+      expect { should contain_concat__fragment("#{default_filelist}/content") }.to raise_error(Puppet::Error, /exclude_filelist/)
+    }
+  end
+
+  describe 'with exclude_content and include_filelist' do
+    let(:params) { {
+        :exclude_content  => "+ /etc/duply\n- /etc\n",
+        :include_filelist => ['/a/b']
+    } }
+
+    specify {
+      expect { should contain_concat__fragment("#{default_filelist}/content") }.to raise_error(Puppet::Error, /include_filelist/)
+    }
+  end
+
+  describe 'with exclude_by_default => false' do
+    let(:params) { {:exclude_by_default => false} }
+
+    it { should_not contain_concat__fragment("#{default_filelist}/exclude-by-default") }
+  end
+>>>>>>> 2c601c0abd5609773276097b01a3fbb8e2bf66b6
 
   describe 'with cron_enabled and cron_hour and cron_minute set' do
     let(:params) { {:cron_enabled => true, :cron_hour => '1', :cron_minute => '2'} }
@@ -293,6 +365,55 @@ describe 'duplicity::profile' do
         'ensure' => 'present',
         'hour'   => '1',
         'minute' => '2'
+      )
+    end
+  end
+
+  describe 'with pre and post script contents' do
+    let(:params) { { :exec_before_content => 'echo stuff', :exec_after_content => 'echo "more stuff"' } }
+    it { should contain_duplicity__profile_exec_before('default/header') }
+    it { should contain_duplicity__profile_exec_before('default/content') }
+    it { should contain_duplicity__profile_exec_after('default/header') }
+    it { should contain_duplicity__profile_exec_after('default/content') }
+  end
+
+  describe 'with pre and post script source' do
+    let(:params) { { :exec_before_source => 'puppet:///a', :exec_after_source => 'puppet:///b' } }
+    it { should_not contain_duplicity__profile_exec_before('default/header') }
+    it { should contain_duplicity__profile_exec_before('default/content') }
+    it { should_not contain_duplicity__profile_exec_after('default/header') }
+    it { should contain_duplicity__profile_exec_after('default/content') }
+  end
+
+  describe 'with cron_enabled and duply_version 1.7.1' do
+    let(:params) { {:cron_enabled => true, :duply_version => '1.7.1'} }
+
+    specify do
+      should contain_cron("backup-default").with(
+        'ensure'  => 'present',
+	'command' => 'duply default cleanup_backup_purgeFull --force >> /var/log/duply/default.log'
+      )
+    end
+  end
+
+  describe 'with cron_enabled and duply_version 1.9.1' do
+    let(:params) { {:cron_enabled => true, :duply_version => '1.9.1'} }
+
+    specify do
+      should contain_cron("backup-default").with(
+        'ensure'  => 'present',
+	'command' => 'duply default cleanup_backup_purgeFull --force >> /var/log/duply/default.log'
+      )
+    end
+  end
+
+  describe 'with cron_enabled and duply_version 1.6' do
+    let(:params) { {:cron_enabled => true, :duply_version => '1.6'} }
+
+    specify do
+      should contain_cron("backup-default").with(
+        'ensure'  => 'present',
+	'command' => 'duply default cleanup_backup_purge-full --force >> /var/log/duply/default.log'
       )
     end
   end

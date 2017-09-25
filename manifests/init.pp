@@ -26,6 +26,9 @@
 #   (defaults to the project's sourceforge page). Otherwise the native `package` resource will be used with `provider`
 #   set to the given value.
 #
+# [*duply_extra_packages*]
+#   Additional packages to be installed which may be needed for storage backends on different platforms.
+#
 # [*duply_archive_version*]
 #   Set the version of duply to be installed (if `duply_package_provider` is set to `archive`).
 #
@@ -52,6 +55,11 @@
 #   The duply executable is sourced from the PATH environment variable. Please use `exec_path` and
 #   `duply_archive_executable` to customize those settings instead.
 #
+# [*duply_version*]
+#   Set the version of the installed duply package in case you are not using the default package of your distribution or
+#   your version is not automatically detected. If you are using `archive` as `duply_package_provider`, please
+#   specify the version via `duply_archive_version`.
+#
 # [*duply_log_dir*]
 #   Set the path to the log directory. Every profile will get its own log file.
 #
@@ -61,8 +69,21 @@
 #   NOTE: This is confidential data. Put it somewhere safe. It can grow quite big over time so you might want to put
 #   it not in the home dir. default '~/.cache/duplicity/duply_<profile>/'
 #
+# [*duply_config_dir_mode*]
+#   Set the mode for duply configuration folder '/etc/duply'. This is a file mode, puppet will add +x for directories
+#   automatically. default '0600'
+#
+# [*duply_purge_config_dir*]
+#   Set the purge behaviour for duply configuration folder '/etc/duply'. default 'true'
+#
+# [*duply_purge_key_dir*]
+#   Set the purge behaviour for duply key folder '/etc/duply-keys'. default 'true'
+#
 # [*duply_log_group*]
 #   Set the group that owns the log directory.
+#
+# [*duply_use_logrotate_module*]
+#   Set if yo61/logrotate module is used or logrotate file is created by puppet template.
 #
 # [*gpg_encryption_keys*]
 #   List of default public keyids used to encrypt the backup.
@@ -108,16 +129,23 @@ class duplicity (
   $duply_package_ensure      = $duplicity::params::duply_package_ensure,
   $duply_package_name        = $duplicity::params::duply_package_name,
   $duply_package_provider    = $duplicity::params::duply_package_provider,
+  $duply_extra_packages      = $duplicity::params::duply_extra_packages,
   $duply_archive_version     = $duplicity::params::duply_archive_version,
   $duply_archive_md5sum      = $duplicity::params::duply_archive_md5sum,
   $duply_archive_url         = undef,
   $duply_archive_proxy       = undef,
   $duply_archive_package_dir = $duplicity::params::duply_archive_package_dir,
   $duply_archive_install_dir = $duplicity::params::duply_archive_install_dir,
+  $duply_version             = undef,
   $duply_archive_executable  = $duplicity::params::duply_archive_executable,
   $duply_log_dir             = $duplicity::params::duply_log_dir,
   $duply_log_group           = $duplicity::params::duply_log_group,
   $duply_cache_dir           = undef,
+  $duply_config_dir_mode     = $duplicity::params::duply_config_dir_mode,
+  $duply_purge_config_dir    = $duplicity::params::duply_purge_config_dir,
+  $duply_purge_key_dir       = $duplicity::params::duply_purge_key_dir,
+  $duply_environment         = undef,
+  $duply_use_logrotate_module= $duplicity::params::duply_use_logrotate_module,
   $gpg_encryption_keys       = $duplicity::params::gpg_encryption_keys,
   $gpg_signing_key           = $duplicity::params::gpg_signing_key,
   $gpg_passphrase            = $duplicity::params::gpg_passphrase,
@@ -151,6 +179,14 @@ class duplicity (
     fail("Class[Duplicity]: duply_archive_version must be alphanumeric, got '${duply_archive_version}'")
   }
 
+  $real_duply_version = empty($duply_version) ? {
+    true => $duply_package_provider ? {
+      'archive' => $duply_archive_version,
+      default   => $duplicity::params::duply_version,
+    },
+    default   => $duply_version,
+  }
+
   validate_absolute_path($duply_archive_package_dir)
   validate_absolute_path($duply_archive_install_dir)
   validate_absolute_path($duply_archive_executable)
@@ -159,7 +195,8 @@ class duplicity (
     validate_absolute_path($duply_cache_dir)
   }
   validate_string($duply_log_group)
+  validate_array($duply_extra_packages)
 
-  class { 'duplicity::install': } ->
-  class { 'duplicity::setup': }
+  class { 'duplicity::install': }
+  -> class { 'duplicity::setup': }
 }

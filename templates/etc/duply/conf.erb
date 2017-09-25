@@ -87,8 +87,10 @@ GPG_OPTS='<%= @real_gpg_options.join(' ') %>'
 TARGET='<%= @target %>'
 # optionally the username/password can be defined as extra variables
 # setting them here _and_ in TARGET results in an error
+<% if @target_username != '' -%>
 TARGET_USER='<%= @target_username %>'
 TARGET_PASS='<%= @target_password %>'
+<% end -%>
 
 # base directory to backup
 SOURCE='<%= @source %>'
@@ -106,6 +108,9 @@ SOURCE='<%= @source %>'
 # Time frame for old backups to keep, Used for the "purge" command.
 # see duplicity man page, chapter TIME_FORMATS)
 #MAX_AGE=1M
+<% if @max_age and !@max_age.to_s.empty? -%>
+MAX_AGE=<%= @max_age %>
+<% end -%>
 
 # Number of full backups to keep. Used for the "purge-full" command.
 # See duplicity man page, action "remove-all-but-n-full".
@@ -193,3 +198,7 @@ DUPL_PARAMS="$DUPL_PARAMS <%= @real_duplicity_params.join(' ') %> "
 <%= extra_conf %>
 <% end -%>
 <% end -%>
+
+#Set Environment variables so it properly auth's for Boto
+<%= @real_duply_environment.join("\n") -%>
+

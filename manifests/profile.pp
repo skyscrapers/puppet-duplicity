@@ -46,6 +46,9 @@
 # [*exclude_filelist*]
 #   List of files to be excluded from the backup. Paths can be relative like '**/cache'.
 #
+# [*exclude_content*]
+#   Raw content to set as the exclude file list. See 'man 1 duplicity', section 'FILE SELECTION'.
+#
 # [*exclude_by_default*]
 #   Exclude any file relative to the source directory that is not included; sets the '- **' parameter.
 #
@@ -58,9 +61,42 @@
 # [*cron_minute*]
 #   The minute expression of the cron job.
 #
+# [*duply_version*]
+#   Currently installed duply version.
+#
+# [*duply_environment*]
+#   An array of extra environment variables to pass to duplicity.
+#
 # [*duplicity_extra_params*]
 #   An array of extra parameters to pass to duplicity.
 #
+# [*duply_custom_batch*]
+#   Custom batch command for Duply cron job. Batch format is '<command>[[_|+|-]<command>[_|+|-]...]' check Duply man page for details. 
+#   Leave undefined for default batch: 'cleanup_backup_purgeFull'
+#
+# [*exec_before_content*]
+#   Content to be added to the pre-backup script
+#
+# [*exec_before_source*]
+#   Source file to be used as the pre-backup script
+#
+# [*exec_after_content*]
+#   Content to be added to the post-backup script
+#
+# [*exec_after_source*]
+#   Source file to be used as the post-backup script
+#
+# [*niceness*]
+#   Nice value, -20 (most favorable scheduling) to 19 (least favorable) - disabled by default
+#
+# [*max_fulls_with_incrs*]
+#   Number of full backups for which incrementals should be kept
+#
+# [*max_full_backups*]
+#   Number of full backups to keep
+#
+# [*max_age*]
+#   Maximum amount of time for which backups should be kept, e.g. 12M
 # === Authors
 #
 # Martin Meinhold <Martin.Meinhold@gmx.de>
@@ -83,16 +119,26 @@ define duplicity::profile(
   $full_if_older_than     = '',
   $max_full_backups       = '',
   $max_fulls_with_incrs   = '',
+  $max_age                = '',
   $volsize                = 50,
   $include_filelist       = [],
   $exclude_filelist       = [],
+  $exclude_content        = undef,
   $exclude_by_default     = true,
   $cron_enabled           = $duplicity::cron_enabled,
   $cron_hour              = undef,
   $cron_minute            = undef,
+  $duply_version          = undef,
+  $duply_environment      = $duplicity::duply_environment,
   $duplicity_extra_params = $duplicity::duplicity_extra_params,
   $duplicity_extra_conf   = $duplicity::duplicity_extra_conf,
   $duply_cache_dir        = $duplicity::duply_cache_dir,
+  $duply_custom_batch     = undef,
+  $exec_before_content    = undef,
+  $exec_before_source     = undef,
+  $exec_after_content     = undef,
+  $exec_after_source      = undef,
+  $niceness               = undef,
 ) {
   require duplicity
 
@@ -116,6 +162,10 @@ define duplicity::profile(
     fail("Duplicity::Profile[${title}]: max_full_backups must be an integer, got '${max_full_backups}'")
   }
 
+  if "str${max_fulls_with_incrs}" !~ /^str[0-9]*$/ {
+    fail("Duplicity::Profile[${title}]: max_fulls_with_incrs must be an integer, got '${max_fulls_with_incrs}'")
+  }
+
   if !is_integer($volsize) {
     fail("Duplicity::Profile[${title}]: volsize must be an integer, got '${volsize}'")
   }
@@ -128,10 +178,26 @@ define duplicity::profile(
     fail("Duplicity::Profile[${title}]: exclude_filelist must be an array")
   }
 
+  if !empty($exclude_content) {
+    validate_string($exclude_content)
+
+    if !empty($exclude_filelist) {
+      fail("Duplicity::Profile[${title}]: exclude_content cannot be used together with exclude_filelist")
+    }
+
+    if !empty($include_filelist) {
+      fail("Duplicity::Profile[${title}]: exclude_content cannot be used together with include_filelist")
+    }
+  }
+
   if !is_bool($gpg_encryption) {
     fail("Duplicity::Profile[${title}]: gpg_encryption must be true or false")
   }
 
+  $real_duply_environment = empty($duply_environment) ? {
+    true    => [],
+    default => any2array($duply_environment)
+  }
 
   $real_gpg_encryption_keys = empty($gpg_encryption_keys) ? {
     true    => [],
@@ -145,6 +211,7 @@ define duplicity::profile(
     true    => [],
     default => any2array($gpg_options)
   }
+  $real_duply_version = pick($duply_version, $duplicity::real_duply_version)
   $real_duplicity_params = empty($duplicity_extra_params) ? {
     true    => [],
     default => any2array($duplicity_extra_params)
@@ -152,8 +219,8 @@ define duplicity::profile(
 
   $profile_config_dir = "${duplicity::params::duply_config_dir}/${title}"
   $profile_config_dir_ensure = $ensure ? {
-    'absent'  => absent,
-    default   => directory,
+    'absent' => absent,
+    default  => directory,
   }
   $profile_config_file = "${profile_config_dir}/conf"
   $profile_filelist_file = "${profile_config_dir}/${duplicity::params::duply_profile_filelist_name}"
@@ -162,12 +229,12 @@ define duplicity::profile(
   $profile_pre_script = "${profile_config_dir}/${duplicity::params::duply_profile_pre_script_name}"
   $profile_post_script = "${profile_config_dir}/${duplicity::params::duply_profile_post_script_name}"
   $profile_file_ensure = $ensure ? {
-    'absent'  => absent,
-    default   => file,
+    'absent' => absent,
+    default  => file,
   }
   $profile_concat_ensure = $ensure ? {
-    'absent'  => absent,
-    default   => present,
+    'absent' => absent,
+    default  => present,
   }
   $cron_ensure = str2bool($cron_enabled) ? {
     false   => absent,
@@ -188,11 +255,12 @@ define duplicity::profile(
   }
 
   file { $profile_config_file:
-    ensure  => $profile_file_ensure,
-    content => template('duplicity/etc/duply/conf.erb'),
-    owner   => 'root',
-    group   => 'root',
-    mode    => '0400',
+    ensure    => $profile_file_ensure,
+    content   => template('duplicity/etc/duply/conf.erb'),
+    owner     => 'root',
+    group     => 'root',
+    mode      => '0400',
+    show_diff => false,
   }
 
   concat { $profile_filelist_file:
@@ -225,6 +293,22 @@ define duplicity::profile(
     }
   }
 
+  if !empty($exclude_content) {
+    concat::fragment { "${profile_filelist_file}/content":
+      target  => $profile_filelist_file,
+      content => $exclude_content,
+      order   => '70',
+    }
+  }
+
+  if $exclude_by_default_ensure == present {
+    concat::fragment { "${profile_filelist_file}/exclude-by-default":
+      target  => $profile_filelist_file,
+      content => "\n- **\n",
+      order   => '90',
+    }
+  }
+
   concat { $profile_pre_script:
     ensure         => $profile_concat_ensure,
     owner          => 'root',
@@ -233,10 +317,19 @@ define duplicity::profile(
     ensure_newline => true,
   }
 
-  duplicity::profile_exec_before { "${title}/header":
-    profile => $title,
-    content => "#!/bin/bash\n",
-    order   => '01',
+  if ! $exec_before_source {
+    duplicity::profile_exec_before { "${title}/header":
+      profile => $title,
+      content => "#!/bin/bash\n",
+      order   => '01',
+    }
+  }
+  if $exec_before_content or $exec_before_source {
+    duplicity::profile_exec_before { "${title}/content":
+      profile => $title,
+      content => $exec_before_content,
+      source  => $exec_before_source,
+    }
   }
 
   concat { $profile_post_script:
@@ -247,10 +340,19 @@ define duplicity::profile(
     ensure_newline => true,
   }
 
-  duplicity::profile_exec_after { "${title}/header":
-    profile => $title,
-    content => "#!/bin/bash\n",
-    order   => '01',
+  if ! $exec_after_source {
+    duplicity::profile_exec_after { "${title}/header":
+      profile => $title,
+      content => "#!/bin/bash\n",
+      order   => '01',
+    }
+  }
+  if $exec_after_content or $exec_after_source {
+    duplicity::profile_exec_after { "${title}/content":
+      profile => $title,
+      content => $exec_after_content,
+      source  => $exec_after_source,
+    }
   }
 
   duplicity::public_key_link { $complete_encryption_keys:
@@ -261,9 +363,30 @@ define duplicity::profile(
     ensure  => present,
   }
 
+  if $duply_custom_batch {
+    $duply_batch = $duply_custom_batch
+  }
+  else {
+    if versioncmp($real_duply_version, '1.7.1') < 0 {
+      $duply_batch  = 'cleanup_backup_purge-full'
+    }
+    else {
+      $duply_batch  = 'cleanup_backup_purgeFull_purgeIncr'
+    }
+  }
+
+  $duply_command  = "duply ${title} ${duply_batch} --force >> ${duplicity::duply_log_dir}/${title}.log 2>&1"
+
+  if $niceness {
+    $cron_command = "nice -n ${niceness} ${duply_command}"
+  }
+  else {
+    $cron_command = $duply_command
+  }
+
   cron { "backup-${title}":
     ensure      => $cron_ensure,
-    command     => "duply ${title} cleanup_backup_purgeFull_purgeIncr --force >> ${duplicity::duply_log_dir}/${title}.log 2>&1",
+    command     => $cron_command,
     environment => "PATH=${duplicity::exec_path}",
     user        => 'root',
     hour        => $cron_hour,

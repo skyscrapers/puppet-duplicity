@@ -1,12 +1,14 @@
-[![Build Status](https://travis-ci.org/skyscrapers/puppet-duplicity.svg?branch=master)](https://travis-ci.org/skyscrapers/puppet-duplicity)
-#duplicity
+# duplicity
 
-##Overview
+[![Puppet Forge](https://img.shields.io/puppetforge/v/tohuwabohu/duplicity.svg)](https://forge.puppetlabs.com/tohuwabohu/duplicity)
+[![Build Status](https://travis-ci.org/skyscrapers/puppet-duplicity.svg?branch=master)](https://travis-ci.org/skyscrapers/puppet-duplicity)
+
+## Overview
 
 Configure [duply](http://duply.net/) on top of [duplicity](http://duplicity.nongnu.org/) to provide a profile-based,
 easy to use backup and restore system.
 
-##Usage
+## Usage
 
 Install duplicity and duply with all default values.
 
@@ -36,15 +38,32 @@ class { 'duplicity':
 }
 ```
 
-Configure a simple backup profile. It will run once a day, do incremental backups by default and create a full backup if
-the previous full backup is older than 7 days. Duplicity will keep at most two full backups and purge older ones.
+In case you're using duply 1.10+ and a storage backend that requires additional environment variables to be set, use
+the following pattern
+
+```
+class { 'duplicity':
+  duply_environment => [
+    "export AWS_ACCESS_KEY_ID='${my_access_key}'",
+    "export AWS_SECRET_ACCESS_KEY='${my_secret_key}'",
+  ],
+}
+```
+
+This works on a profile-level as well.
+
+Configure a simple backup profile that stops an application before the backup starts and starts it when complete.
+It will run once a day, do incremental backups by default and create a full backup if the previous full backup
+is older than 7 days. Duplicity will keep at most two full backups and purge older ones.
 
 ```
 duplicity::profile { 'system':
-  full_if_older_than => '7D',
-  max_full_backups   => 2,
-  cron_hour          => '4',
-  cron_minute        => '0',
+  full_if_older_than  => '7D',
+  max_full_backups    => 2,
+  cron_hour           => '4',
+  cron_minute         => '0',
+  exec_before_content => '/bin/systemctl stop myapp',
+  exec_after_content  => '/bin/systemctl start myapp',
 }
 ```
 
@@ -102,19 +121,17 @@ duplicity::profile { 'system':
 }
 ```
 
-##Limitations
+## Limitations
 
 The module has been tested on the following operating systems. Testing and patches for other platforms are welcome.
 
-* Debian 6.0 (Squeeze)
-* Debian 7.0 (Wheezy)
-* Ubuntu 12.04 (Precise Pangolin)
+* Debian 8.0 (Jessie)
+* Debian 9.0 (Stretch)
 * Ubuntu 14.04 (Trusty Tahr)
+* Ubuntu 16.04 (Xenial Xerus)
 * RHEL/Centos 6
 
-[![Build Status](https://travis-ci.org/tohuwabohu/puppet-duplicity.png?branch=master)](https://travis-ci.org/tohuwabohu/puppet-duplicity)
-
-##Contributing
+## Contributing
 
 1. Fork it
 2. Create your feature branch (`git checkout -b my-new-feature`)
@@ -122,7 +139,7 @@ The module has been tested on the following operating systems. Testing and patch
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create new Pull Request
 
-###Development
+### Development
 
 This project uses rspec-puppet and beaker to ensure the module works as expected and to prevent regressions.
 
@@ -133,5 +150,5 @@ bundle install --path vendor
 bundle exec rake spec
 bundle exec rake beaker
 ```
-(note: see [Beaker - Supported ENV variables](https://github.com/puppetlabs/beaker/wiki/How-to-Write-a-Beaker-Test-for-a-Module#beaker-rspec-details)
-for a list of environment variables to control the default behaviour of Beaker)
+(note: see [Beaker - Supported ENV variables](https://github.com/puppetlabs/beaker-rspec/blob/master/README.md) for a
+list of environment variables to control the default behaviour of Beaker)
