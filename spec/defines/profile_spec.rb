@@ -69,7 +69,7 @@ describe 'duplicity::profile' do
     it { should contain_file(default_config_file).without_content(/^MAX_AGE=.*$/) }
     it { should contain_file(default_config_file).without_content(/^MAX_FULL_BACKUPS=.*$/) }
     it { should contain_file(default_config_file).with_content(/^VOLSIZE=50$/) }
-    # it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_content(/^\n\- \*\*$/) }
+    it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_content(/^\n\- \*\*$/) }
     it { should_not contain_concat__fragment("#{default_filelist}/include") }
     it { should_not contain_concat__fragment("#{default_filelist}/exclude") }
     specify { should contain_cron("backup-default").with_ensure('absent') }
@@ -99,8 +99,6 @@ describe 'duplicity::profile' do
     end
   end
 
-<<<<<<< HEAD
-=======
   describe 'with duplicity_extra_params defined' do
     let(:params) { {:duplicity_extra_params => [ '--s3-use-3-use-server-side-encryption' ]} }
 
@@ -110,7 +108,6 @@ describe 'duplicity::profile' do
     end
   end
 
->>>>>>> 2c601c0abd5609773276097b01a3fbb8e2bf66b6
   describe 'with gpg_encryption => false' do
     let(:params) { {:gpg_encryption => false} }
 
@@ -313,13 +310,6 @@ describe 'duplicity::profile' do
     }
   end
 
-<<<<<<< HEAD
-  # describe 'with exclude_by_default => false' do
-  #   let(:params) { {:exclude_by_default => false} }
-  #
-  #   it { should contain_concat__fragment("#{default_filelist}/exclude-by-default").with_ensure('absent') }
-  # end
-=======
   describe 'with exclude_content => "+ /etc/duply\n- /etc\n"' do
     let(:params) { { :exclude_content => "+ /etc/duply\n- /etc\n" } }
 
@@ -355,7 +345,6 @@ describe 'duplicity::profile' do
 
     it { should_not contain_concat__fragment("#{default_filelist}/exclude-by-default") }
   end
->>>>>>> 2c601c0abd5609773276097b01a3fbb8e2bf66b6
 
   describe 'with cron_enabled and cron_hour and cron_minute set' do
     let(:params) { {:cron_enabled => true, :cron_hour => '1', :cron_minute => '2'} }
