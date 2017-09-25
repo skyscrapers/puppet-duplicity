@@ -380,7 +380,7 @@ describe 'duplicity::profile' do
     specify do
       should contain_cron("backup-default").with(
         'ensure'  => 'present',
-	'command' => 'duply default cleanup_backup_purgeFull --force >> /var/log/duply/default.log'
+	'command' => 'duply default cleanup_backup_purgeFull_purgeIncr --force >> /var/log/duply/default.log 2>&1'
       )
     end
   end
@@ -391,7 +391,7 @@ describe 'duplicity::profile' do
     specify do
       should contain_cron("backup-default").with(
         'ensure'  => 'present',
-	'command' => 'duply default cleanup_backup_purgeFull --force >> /var/log/duply/default.log'
+	'command' => 'duply default cleanup_backup_purgeFull_purgeIncr --force >> /var/log/duply/default.log 2>&1'
       )
     end
   end
@@ -402,7 +402,7 @@ describe 'duplicity::profile' do
     specify do
       should contain_cron("backup-default").with(
         'ensure'  => 'present',
-	'command' => 'duply default cleanup_backup_purge-full --force >> /var/log/duply/default.log'
+	'command' => 'duply default cleanup_backup_purge-full --force >> /var/log/duply/default.log 2>&1'
       )
     end
   end
