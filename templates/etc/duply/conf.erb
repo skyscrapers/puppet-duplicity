@@ -146,6 +146,16 @@ VOLSIZE=<%= @volsize %>
 DUPL_PARAMS="$DUPL_PARAMS --volsize $VOLSIZE "
 <% end -%>
 
+# sets duplicity --allow-source-mismatch
+# for EC2 instances, if and when they change their local subnet IP
+# full backups can fail as the data set identifier will change giving error:
+# "Aborting because you may have accidentally tried to backup two different data sets
+# to the same remote location, or using the same archive directory."
+<%= if @_allow_source_mismatch -%>
+ALLOW_SOURCE_MISMATCH=<% @_allow_source_mismatch -%>
+DUPL_PARAMS="$DUPL_PARAMS $ALLOW_SOURCE_MISMATCH "
+<% end -%>
+
 # verbosity of output (error 0, warning 1-2, notice 3-4, info 5-8, debug 9)
 # default is 4, if not set
 #VERBOSITY=5

@@ -127,6 +127,7 @@ class duplicity (
   $backup_target_password    = $duplicity::params::backup_target_password,
   $cron_enabled              = $duplicity::params::cron_enabled,
   $exec_path                 = $duplicity::params::exec_path,
+  $allow_source_mismatch = undef,
 
   # deprecated
   $duply_executable = undef,
@@ -149,6 +150,11 @@ class duplicity (
 
   if $duply_archive_version !~ /^[a-zA-Z0-9\._-]+$/ {
     fail("Class[Duplicity]: duply_archive_version must be alphanumeric, got '${duply_archive_version}'")
+  }
+
+  $_allow_source_mismatch = $allow_source_mismatch ? {
+    undef   => $duplicity::params::allow_source_mismatch,
+    default => ' --allow-source-mismatch',
   }
 
   validate_absolute_path($duply_archive_package_dir)

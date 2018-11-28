@@ -68,4 +68,6 @@ class duplicity::params {
   $exec_path = $::osfamily ? {
     default => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
   }
+
+  $allow_source_mismatch = undef
 }
